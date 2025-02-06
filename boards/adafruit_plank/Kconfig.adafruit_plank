@@ -1,5 +1,5 @@
 # Copyright (c) 2020 Lucian Copeland for Adafruit Industries
 # SPDX-License-Identifier: Apache-2.0
 
-config BOARD_FOO
+config BOARD_ADAFRUIT_PLANK
 	select SOC_STM32F405XX

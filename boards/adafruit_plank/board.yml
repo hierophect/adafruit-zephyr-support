@@ -1,5 +1,5 @@
 board:
-  name: foo
+  name: adafruit_plank
   full_name: Feather STM32F405 Express
   vendor: adafruit
   socs:

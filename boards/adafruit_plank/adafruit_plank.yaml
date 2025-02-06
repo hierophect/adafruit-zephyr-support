@@ -1,4 +1,4 @@
-identifier: foo
+identifier: adafruit_plank
 name: Adafruit Feather STM32F405 Express
 type: mcu
 arch: arm
