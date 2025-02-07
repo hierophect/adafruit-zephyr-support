@@ -1,5 +1,5 @@
 board:
-  name: adafruit_plank
+  name: test_stm32f405_feather
   full_name: Feather STM32F405 Express
   vendor: adafruit
   socs:
