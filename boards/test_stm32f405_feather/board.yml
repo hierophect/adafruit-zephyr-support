@@ -1,0 +1,6 @@
+board:
+  name: test_stm32f405_feather
+  full_name: Feather STM32F405 Express
+  vendor: adafruit
+  socs:
+    - name: stm32f405xx
