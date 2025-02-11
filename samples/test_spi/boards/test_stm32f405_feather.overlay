@@ -1,0 +1,37 @@
+/*
+ * Copyright (c) 2025 Lucian Copeland for Adafruit Industries
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+#include <zephyr/dt-bindings/spi/spi.h>
+
+/ {
+	chosen {
+		zephyr,display = &ssd1306_ssd1306_128x32_spi;
+	};
+};
+
+&feather_spi {
+	status = "okay";
+
+	ssd1306_ssd1306_128x32_spi: ssd1306@0 {
+		compatible = "solomon,ssd1306fb";
+		reg = <0x0>;
+		spi-max-frequency = <20000000>;
+		width = <128>;
+		height = <32>;
+		segment-offset = <0>;
+		page-offset = <0>;
+		display-offset = <0>;
+		multiplex-ratio = <31>;
+		segment-remap;
+		com-invdir;
+		com-sequential;
+		prechargep = <0x22>;
+		data-cmd-gpios = <&feather_header 14 0>;
+		/* reset-gpios = <&feather_header 15 GPIO_ACTIVE_LOW>; */
+	};
+};
+
+
