@@ -9,12 +9,15 @@
  */
 
 /dts-v1/;
+
 #include <raspberrypi/rpi_pico/rp2350a.dtsi>
 #include <raspberrypi/rpi_pico/m33.dtsi>
 #include <freq.h>
 #include <zephyr/dt-bindings/i2c/i2c.h>
 #include <zephyr/dt-bindings/pwm/pwm.h>
 #include <zephyr/dt-bindings/pinctrl/rpi-pico-rp2350a-pinctrl.h>
+
+#include "feather_connector.dtsi"
 
 /* pinctrl config for Feather RP2350 board pinout.
  # See
@@ -55,13 +58,16 @@
 		 * - zephyr/dts/bindings/spi/arm,pl022.yaml
 		 * - zephyr/dts/bindings/spi/spi-controller.yaml
          */
+		cs-gpios = <&gpio0 9 GPIO_ACTIVE_LOW>;  /* D9 */
 		group1 {
-			pinmux = <SPI1_CSN_P9>, <SPI0_SCK_P22>, <SPI0_TX_P23>;
+			/* This might need a CS pin as first item of list? */
+			pinmux = <SPI0_SCK_P22>, <SPI0_TX_P23>;
 		};
 		group2 {
 			pinmux = <SPI0_RX_P20>;
 			input-enable;
 		};
+		status = "okay";
 	};
 };
 

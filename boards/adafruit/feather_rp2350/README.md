@@ -6,31 +6,68 @@ Most the changes have to do with pinctrl devicetree config because the board
 pinouts are different.
 
 
-## Sample Usage with Raspberry Pi Debug Probe
+## Build & Flash Zephyr Shell Sample
 
-First, you need to build openocd with RP2350 support (see next section).
+Programming with OpenOCD and the Raspberry Pi Debug Probe is convenient but
+optional. If you prefer, you can use UF2 with the ROM bootloader.
 
-Then, something like this should work to build and run the Zephyr shell sample
-with I2C support (paths might need tweaks depending on how you did west init):
+
+### UF2 Bootloader Option
+
+First build the shell with I2C, SPI, and UART serial support:
 ```
 $ cd zephyr-workspace
 $ ls
 adafruit-zephyr-support  bootloader  modules  openocd  tools  zephyr
 $ source .venv/bin/activate
 (.venv) $ cd adafruit-zephyr-support
-(.venv) $ west build -b feather_rp2350/rp2350a/m33  \
-    ../zephyr/samples/subsys/shell/shell_module/    \
-    -- -DOPENOCD=../openocd/build/bin/openocd       \
-    -DBOARD_ROOT=$(pwd)                             \
-    -DCONFIG_I2C=y -DCONFIG_I2C_SHELL=y
-(.venv) $ west flash
-(.venv) $ screen -fn /dev/serial/by-id/*Pi_Debug* 115200
+(.venv) $ west build -b feather_rp2350/rp2350a/m33 \
+ ../zephyr/samples/subsys/shell/shell_module/      \
+ -- -DBOARD_ROOT=$(pwd)                            \
+ -DCONFIG_I2C_SHELL=y -DCONFIG_SPI_SHELL=y
 ```
 
-In screen, type Enter a couple times to get the Zephyr shell prompt. From
-the prompt, you can do stuff like this:
+Then copy `build/zephyr/zephyr.uf2` to the bootloader's RP2350 drive by
+whatever method you prefer.
+
+
+### OpenOCD + Raspberry Pi Debug Probe Option
+
+If you want to use OpenOCD with the Raspberry Pi Debug Probe, you will need to
+build a copy of the Raspberry Pi version of `openocd` because upstream
+`openocd` does not support the RP2350 yet (as of mid February 2025). See the
+"Getting OpenOCD to Work" section below for details on building `openocd`.
+
+Build and flash the shell sample with I2C, SPI, and UART:
 ```
-uart:~$
+$ cd zephyr-workspace
+$ ls
+adafruit-zephyr-support  bootloader  modules  openocd  tools  zephyr
+$ source .venv/bin/activate
+(.venv) $ cd adafruit-zephyr-support
+(.venv) $ west build -b feather_rp2350/rp2350a/m33 \
+ ../zephyr/samples/subsys/shell/shell_module/      \
+ -- -DOPENOCD=../openocd/build/bin/openocd         \
+ -DBOARD_ROOT=$(pwd)                               \
+ -DCONFIG_I2C_SHELL=y -DCONFIG_SPI_SHELL=y
+```
+
+Then flash with west:
+```
+(.venv) $ west flash
+```
+
+
+## Use Zephyr Shell with tio
+
+Once you've flashed the shell firmware, you can try using the `i2c` and `spi`
+commands in the Zephyr shell. When your serial monitor connects, you may need
+to type Enter a couple times to get a shell prompt.
+
+At the shell prompt, you can do stuff like:
+```
+(.venv) $ tio /dev/serial/by-id/usb-Raspberry_Pi_Debug_Probe*
+...
 uart:~$ demo board
 feather_rp2350
 uart:~$ version
@@ -49,8 +86,30 @@ uart:~$ i2c scan i2c@40098000
 60: -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --
 70: -- -- -- -- -- -- -- --
 1 devices found on i2c@40098000
-uart:~$
+uart:~$ spi
+spi - SPI commands
+Subcommands:
+  conf        : Configure SPI
+                Usage: spi conf <device> <frequency> [<settings>]
+                <settings> - any sequence of letters:
+                o - SPI_MODE_CPOL
+                h - SPI_MODE_CPHA
+                l - SPI_TRANSFER_LSB
+                T - SPI_FRAME_FORMAT_TI
+                example: spi conf spi1 1000000 ol
+  cs          : Assign CS GPIO to SPI device
+                Usage: spi cs <gpio-device> <pin> [<gpio flags>]example: spi
+                conf gpio1 3 0x01
+  transceive  : Transceive data to and from an SPI device
+                Usage: spi transceive <TX byte 1> [<TX byte 2> ...]
+uart:~$ spi conf spi0 10000000
+device spi0 not found.
 ```
+
+So far I2C works, but SPI is mysterious. Most of the zephyr samples and tests
+related to SPI are tied to specific hardware configurations. I haven't been
+able to get any of those working yet. Also, the RP2350 SPI driver's chip
+select mechanism is mysterious (pinmux vs cs-gpio is unclear).
 
 For the example scan above, I had an SHT41 (address 0x44) connected to my
 Feather RP2350. The scan implementation comes from
