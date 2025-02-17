@@ -44,30 +44,36 @@
 		};
 	};
 	spi0_default: spi0_default {
-		/* WARNING: This is untested and quite possibly broken */
-		/* Feather-silk:RP2-pin
-		 * D9(CS):GPIO9, SCK:GPIO22, MISO:GPIO20, MOSI:GPIO23
-		 * Configuration for chip select is a bit mysterious. I see things
-		 * suggesting that it's possible to use any GPIO for the CS line by
-		 * giving a cs-gpios property. But, I see no mention of how to resolve
-		 * that against the group1 pinmux property which apparently expects a
-		 * 3 item array of CS, SCK, TX(MOSI). The Feather MOSI, MISO, and SCK
-		 * pins have SPI1 functions, but the only Feather header pin with an
-		 * SPI1 CSn function is D5. So, maybe CS has to be D5? That's awkward.
-		 * References:
-		 * - zephyr/dts/bindings/spi/arm,pl022.yaml
-		 * - zephyr/dts/bindings/spi/spi-controller.yaml
-         */
+		/*
+		* Mappings of Feather silkscreen to RP2350-pin:
+		* D9(CS):GPIO9, SCK:GPIO22, MISO:GPIO20, MOSI:GPIO23
+		*
+		* Configuration for chip select is a bit mysterious. In particular,
+		* I've not found documentation explaining how to combine cs-gpios with
+		* the pinmux stuff. Doing it this way seems to work though.
+		*
+		* Using a GPIO for CS is important because the Feather RP2350 MOSI,
+		* MISO, and SCK pins have SPI1 functions, but the only Feather header
+		* pin with an SPI1 CSn function is D5.
+		* References:
+		* - zephyr/dts/bindings/spi/arm,pl022.yaml
+		* - zephyr/dts/bindings/spi/spi-controller.yaml
+		* - https://datasheets.raspberrypi.com/rp2350/rp2350-datasheet.pdf
+		*/
 		cs-gpios = <&gpio0 9 GPIO_ACTIVE_LOW>;  /* D9 */
 		group1 {
-			/* This might need a CS pin as first item of list? */
+			/*
+			* The rpi_pico2 version of this gives a 3-element list with CS
+			* as the first item. It seems to be empirically okay to give a
+			* 2-element list with SCK and TX, then use cs-gpios for CS,
+			* but I haven't found documentation explaining why this works.
+			*/
 			pinmux = <SPI0_SCK_P22>, <SPI0_TX_P23>;
 		};
 		group2 {
 			pinmux = <SPI0_RX_P20>;
 			input-enable;
 		};
-		status = "okay";
 	};
 };
 
@@ -131,6 +137,7 @@
 	clock-frequency = <DT_FREQ_M(8)>;
 	pinctrl-0 = <&spi0_default>;
 	pinctrl-names = "default";
+	status = "okay";
 };
 
 &i2c1 {

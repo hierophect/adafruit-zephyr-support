@@ -102,18 +102,40 @@ Subcommands:
                 conf gpio1 3 0x01
   transceive  : Transceive data to and from an SPI device
                 Usage: spi transceive <TX byte 1> [<TX byte 2> ...]
-uart:~$ spi conf spi0 10000000
-device spi0 not found.
+uart:~$ spi conf
+conf: wrong parameter count
+conf - Configure SPI
+       Usage: spi conf <device> <frequency> [<settings>]
+       <settings> - any sequence of letters:
+       o - SPI_MODE_CPOL
+       h - SPI_MODE_CPHA
+       l - SPI_TRANSFER_LSB
+       T - SPI_FRAME_FORMAT_TI
+       example: spi conf spi1 1000000 ol
+Subcommands:
+  spi@40080000
+uart:~$ spi conf spi@40080000 1000000
+uart:~$ spi transceive 0x53 0x50 0x49 0x20 0x57 0x6f 0x72 0x6b 0x73
+TX:
+00000000: 53 50 49 20 57 6f 72 6b  73                      |SPI Work s       |
+RX:
+00000000: 53 50 49 20 57 6f 72 6b  73                      |SPI Work s       |
+uart:~$
 ```
 
-So far I2C works, but SPI is mysterious. Most of the zephyr samples and tests
-related to SPI are tied to specific hardware configurations. I haven't been
-able to get any of those working yet. Also, the RP2350 SPI driver's chip
-select mechanism is mysterious (pinmux vs cs-gpio is unclear).
+For the example scan above:
+1. I had an SHT41 (address 0x44) connected to my Feather RP2350. The scan
+   implementation comes from
+   [zephyr/drivers/i2c/i2c\_shell.c](https://github.com/zephyrproject-rtos/zephyr/blob/main/drivers/i2c/i2c_shell.c).
+2. I had a 330 Ohm resistor from MOSI to MISO for SPI loopback. The SPI shell
+   implementation comes from
+   [zephyr/drivers/spi/spi\_shell.c](https://github.com/zephyrproject-rtos/zephyr/blob/main/drivers/spi/spi_shell.c).
 
-For the example scan above, I had an SHT41 (address 0x44) connected to my
-Feather RP2350. The scan implementation comes from
-[zephyr/drivers/i2c/i2c_shell.c](https://github.com/zephyrproject-rtos/zephyr/blob/main/drivers/i2c/i2c_shell.c).
+SPI chip select is a bit mysterious. From checking with a Saleae, I'm not sure
+if it's working and CS is being continuously asserted low, or if the pin is in
+high impedance mode, or what. It might be the case that I'd need to have
+multiple devices with multiple CS pins set up to see any change on the CS
+lines. Not sure.
 
 
 ## Getting OpenOCD to Work
