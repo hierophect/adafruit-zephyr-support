@@ -180,6 +180,8 @@ be able to upgrade from a non-Zephyr CircuitPython build to a Zephyr-based
 CircuitPython build using UF2. That process should preserve the old contents
 of the CIRCUITPY drive.
 
+Notes from CircuitPython source:
+
 1. CIRCUITPY drive partition start address and is defined in
    [ports/raspberrypi/mpconfigport.h](https://github.com/adafruit/circuitpython/blob/457edc304a96c64596ae423ca9e3eebd3641fa6d/ports/raspberrypi/mpconfigport.h#L29)
    as:
@@ -195,11 +197,38 @@ of the CIRCUITPY drive.
    #define CIRCUITPY_INTERNAL_NVM_SIZE  (4 * 1024)
    ```
 
+Notes from the Raspberry Pi [RP2350 datasheet](https://datasheets.raspberrypi.com/rp2350/rp2350-datasheet.pdf):
+
+1. Bootloader lives in chip's 32kB mask ROM (Ch 5 intro)
+2. Flash sector size is 4kB (section 5.1.2.1)
+3. Bootloader scans the first 4kB of flash looking for `IMAGE_DEF` or
+   `PARTITION_TABLE` blocks to decide if it should do a "Flash Image Boot",
+   "Flash Partition Boot", or "Partition-Table-in-Image Boot". See datasheet
+   sections 5.1.12, 5.1.13, and 5.1.14.
+
+Notes from the zephyr linker files and devicetree spec files:
+
+1. From `boards/raspberrypi/rpi_pico2/rpi_pico2.dtsi`: `image_def` partition
+   starts at `0x00000000` and is 256 bytes (`0x100`)
+2. From `soc/raspberrypi/rpi_pico/rp2350/linker.ld`: flash is linked at
+   ```
+   MEMORY
+   {
+       IMAGE_DEF_FLASH (r) : ORIGIN = 0x10000000, LENGTH = 128
+   }
+   ```
+
+Notes from Adafruit Feather RP2350 product page:
+
+1. External flash chip size is 8MB
+
+
 So, that tells us...
 
-| Partition  | Start Address       | Size     |
-| ---------- | ------------------- | -------- |
-| Bootloader | ???                 | ???      |
-| Firmware   | ???                 | 1020 KiB |
-| NVM        | Firmware + 1020 KiB |    4 KiB |
-| CIRCUITPY  | NVM      +    4 KiB | ???      |
+| Partition  | Start Address     | Size                   |
+| ---------- | ----------------- | ---------------------- |
+| Bootloader | N/A (mask ROM)    | N/A                    |
+| IMAGE\_DEF | 0                 | 0x000100   (256B)      |
+| Firmware   | 0x000100   (256B) | 0x0fef00 (1020kB-256B) |
+| NVM        | 0x0ff000 (1020kB) | 0x001000    (4kB)      |
+| CIRCUITPY  | 0x100000    (1MB) | 0x700000    (7MB)      |
