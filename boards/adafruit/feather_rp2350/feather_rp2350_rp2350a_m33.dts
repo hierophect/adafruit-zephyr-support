@@ -1,0 +1,173 @@
+/*
+ * SPDX-License-Identifier: Apache-2.0
+ * SPDX-FileCopyrightText: Copyright (c) 2024 Andrew Featherstone
+ * SPDX-FileCopyrightText: Copyright 2025 Sam Blenny
+ *
+ * Derived from zephyrproject-rtos/zephyr/boards/raspberrypi/rpi_pico2.
+ * Original rpi_pico2 board def by Andrew Featherstone.
+ * Adapted for Feather RP2350 by Sam Blenny.
+ */
+
+/dts-v1/;
+
+#include <raspberrypi/rpi_pico/rp2350a.dtsi>
+#include <raspberrypi/rpi_pico/m33.dtsi>
+#include <freq.h>
+#include <zephyr/dt-bindings/i2c/i2c.h>
+#include <zephyr/dt-bindings/pwm/pwm.h>
+#include <zephyr/dt-bindings/pinctrl/rpi-pico-rp2350a-pinctrl.h>
+
+#include "feather_connector.dtsi"
+
+/* pinctrl config for Feather RP2350 board pinout.
+ # See
+ * - zephyr/include/zephyr/dt-bindings/pinctrl/rpi-pico-pinctrl-common.h
+ * - zephyr/include/zephyr/dt-bindings/pinctrl/rpi-pico-rp2350-pinctrl-common.h
+ * - zephyr/include/zephyr/dt-bindings/pinctrl/rpi-pico-rp2350a-pinctrl.h
+ * for definitions of UART0_TX_P0, UART0_RX_P1, etc.
+ */
+&pinctrl {
+	uart0_default: uart0_default {
+		group1 {
+			pinmux = <UART0_TX_P0>;
+		};
+		group2 {
+			pinmux = <UART0_RX_P1>;
+			input-enable;
+		};
+	};
+	i2c1_default: i2c1_default {
+		group1 {
+			pinmux = <I2C1_SDA_P2>, <I2C1_SCL_P3>;
+			input-enable;
+			input-schmitt-enable;
+		};
+	};
+	spi0_default: spi0_default {
+		/*
+		* Mappings of Feather silkscreen to RP2350-pin:
+		* D9(CS):GPIO9, SCK:GPIO22, MISO:GPIO20, MOSI:GPIO23
+		*
+		* Configuration for chip select is a bit mysterious. In particular,
+		* I've not found documentation explaining how to combine cs-gpios with
+		* the pinmux stuff. Doing it this way seems to work though.
+		*
+		* Using a GPIO for CS is important because the Feather RP2350 MOSI,
+		* MISO, and SCK pins have SPI1 functions, but the only Feather header
+		* pin with an SPI1 CSn function is D5.
+		* References:
+		* - zephyr/dts/bindings/spi/arm,pl022.yaml
+		* - zephyr/dts/bindings/spi/spi-controller.yaml
+		* - https://datasheets.raspberrypi.com/rp2350/rp2350-datasheet.pdf
+		*/
+		cs-gpios = <&gpio0 9 GPIO_ACTIVE_LOW>;  /* D9 */
+		group1 {
+			/*
+			* The rpi_pico2 version of this gives a 3-element list with CS
+			* as the first item. It seems to be empirically okay to give a
+			* 2-element list with SCK and TX, then use cs-gpios for CS,
+			* but I haven't found documentation explaining why this works.
+			*/
+			pinmux = <SPI0_SCK_P22>, <SPI0_TX_P23>;
+		};
+		group2 {
+			pinmux = <SPI0_RX_P20>;
+			input-enable;
+		};
+	};
+};
+
+/ {
+	chosen {
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+		zephyr,console = &uart0;
+		zephyr,shell-uart = &uart0;
+		zephyr,code-partition = &code_partition;
+	};
+
+	aliases {
+		watchdog0 = &wdt0;
+	};
+};
+
+&flash0 {
+	reg = <0x10000000 DT_SIZE_M(4)>;
+
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		/* Reserved memory for an image definition block. The block is much
+		 * smaller than 256 bytes, but in practice the linker places the vector
+		 * table at a much larger alignment offset.
+		 */
+		image_def: partition@0 {
+			label = "image_def";
+			reg = <0x00000000 0x100>;
+			read-only;
+		};
+
+		/* CircuitPython firmware partition starts at 0x100, after the image
+		 * definition block, and extends to 1MB - 4kB, before the NVM
+		 * partition. This is meant to match the partition layout of
+		 * non-Zephyr CircuitPython builds for the Feather RP2350 board.
+		 */
+		code_partition: partition@100 {
+			label = "code-partition";
+			reg = <0x100 0xfef00>;   /* 0xfef00 = 1020kB - 256 */
+			read-only;
+		};
+
+		/* CircuitPython NVM partition, 4kB, aligned to end at 1MB boundary.
+		*/
+		nvm_partition: partition@ff000 {
+			label = "nvm-partition";
+			reg = <0xff000 0x1000>;
+		};
+
+		/* CIRCUITPY drive partition, 7MB, aligned to end at 8MB boundary.
+		*/
+		circuitpy_partition: partition@100000 {
+			label = "circuitpy-partition";
+			reg = <0x100000 0x700000>;
+		};
+
+	};
+};
+
+&uart0 {
+	current-speed = <115200>;
+	status = "okay";
+	pinctrl-0 = <&uart0_default>;
+	pinctrl-names = "default";
+};
+
+&gpio0 {
+	status = "okay";
+};
+
+&spi0 {
+	clock-frequency = <DT_FREQ_M(8)>;
+	pinctrl-0 = <&spi0_default>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&i2c1 {
+	clock-frequency = <I2C_BITRATE_STANDARD>;
+	pinctrl-0 = <&i2c1_default>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&timer0 {
+	status = "okay";
+};
+
+zephyr_udc0: &usbd {
+	status = "okay";
+};
+
+pico_serial: &uart0 {};

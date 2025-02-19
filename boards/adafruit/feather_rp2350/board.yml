@@ -1,0 +1,6 @@
+board:
+  name: feather_rp2350
+  full_name: Adafruit Feather RP2350
+  vendor: adafruit
+  socs:
+  - name: rp2350a
