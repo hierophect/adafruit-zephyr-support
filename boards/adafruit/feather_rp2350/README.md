@@ -169,3 +169,37 @@ $ source .venv/bin/activate
     -DOPENOCD=$WORKSPACE_DIR/openocd/build/bin/openocd \
     -DBOARD_ROOT=$WORKSPACE_DIR/adafruit-zephyr-support/boards
 ```
+
+
+## Calculating Flash Partition Layout
+
+To play nice with CircuitPython, this board definition needs to use a flash
+partition layout that respects the existing CircuitPython bootloader, NVM,
+and CIRCUITPY drive partitions. The idea is that, at some point, people will
+be able to upgrade from a non-Zephyr CircuitPython build to a Zephyr-based
+CircuitPython build using UF2. That process should preserve the old contents
+of the CIRCUITPY drive.
+
+1. CIRCUITPY drive partition start address and is defined in
+   [ports/raspberrypi/mpconfigport.h](https://github.com/adafruit/circuitpython/blob/457edc304a96c64596ae423ca9e3eebd3641fa6d/ports/raspberrypi/mpconfigport.h#L29)
+   as:
+   ```
+   #define CIRCUITPY_CIRCUITPY_DRIVE_START_ADDR (CIRCUITPY_FIRMWARE_SIZE + CIRCUITPY_INTERNAL_NVM_SIZE)
+   ```
+2. CircuitPython firmware size is defined in [mpconfigport.h](https://github.com/adafruit/circuitpython/blob/457edc304a96c64596ae423ca9e3eebd3641fa6d/ports/raspberrypi/mpconfigport.h) as:
+   ```
+   #define CIRCUITPY_FIRMWARE_SIZE (1020 * 1024)
+   ```
+3. NVM size is defined (also in mpconfigport.h) as:
+   ```
+   #define CIRCUITPY_INTERNAL_NVM_SIZE  (4 * 1024)
+   ```
+
+So, that tells us...
+
+| Partition  | Start Address       | Size     |
+| ---------- | ------------------- | -------- |
+| Bootloader | ???                 | ???      |
+| Firmware   | ???                 | 1020 KiB |
+| NVM        | Firmware + 1020 KiB |    4 KiB |
+| CIRCUITPY  | NVM      +    4 KiB | ???      |
