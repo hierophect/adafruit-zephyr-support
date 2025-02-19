@@ -5,7 +5,7 @@
  *
  * Derived from zephyrproject-rtos/zephyr/boards/raspberrypi/rpi_pico2.
  * Original rpi_pico2 board def by Andrew Featherstone.
- * Adapted for Feather RP2350 by Sam Blenny. 
+ * Adapted for Feather RP2350 by Sam Blenny.
  */
 
 /dts-v1/;
@@ -109,16 +109,31 @@
 			read-only;
 		};
 
-		/*
-		 * Usable flash. Starts at 0x100, after the image definition block.
-		 * The partition size is 4MB minus the 0x100 bytes taken by the
-		 * image definition.
+		/* CircuitPython firmware partition starts at 0x100, after the image
+		 * definition block, and extends to 1MB - 4kB, before the NVM
+		 * partition. This is meant to match the partition layout of
+		 * non-Zephyr CircuitPython builds for the Feather RP2350 board.
 		 */
 		code_partition: partition@100 {
 			label = "code-partition";
-			reg = <0x100 (DT_SIZE_M(4) - 0x100)>;
+			reg = <0x100 0xfef00>;   /* 0xfef00 = 1020kB - 256 */
 			read-only;
 		};
+
+		/* CircuitPython NVM partition, 4kB, aligned to end at 1MB boundary.
+		*/
+		nvm_partition: partition@ff000 {
+			label = "nvm-partition";
+			reg = <0xff000 0x1000>;
+		};
+
+		/* CIRCUITPY drive partition, 7MB, aligned to end at 8MB boundary.
+		*/
+		circuitpy_partition: partition@100000 {
+			label = "circuitpy-partition";
+			reg = <0x100000 0x700000>;
+		};
+
 	};
 };
 
